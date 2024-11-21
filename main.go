@@ -10,12 +10,18 @@ import (
 func sseHandler(w http.ResponseWriter, r *http.Request) {
 	// Set headers for SSE
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.Header().Set("Pragma", "no-cache") // Prevent caching in older HTTP caches
 
 	// Send an initial message
 	fmt.Fprintf(w, "data: Connected to SSE server\n\n")
-	w.(http.Flusher).Flush()
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	} else {
+		log.Println("Failed to flush initial message")
+	}
 	fmt.Println("New client connection")
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -30,7 +36,11 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 			// Send periodic updates
 			message := fmt.Sprintf("data: Server time is %s\n\n", t.Format(time.RFC3339))
 			fmt.Fprint(w, message)
-			w.(http.Flusher).Flush()
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			} else {
+				log.Println("Failed to flush data")
+			}
 		}
 	}
 }
@@ -52,7 +62,12 @@ func htmlHandler(w http.ResponseWriter, r *http.Request) {
 				eventSource.onmessage = (event) => {
 					const messagesDiv = document.getElementById('messages');
 					const newMessage = document.createElement('div');
-					newMessage.textContent = event.data;
+					
+					// Get the current client time when the message is received
+					const receivedTime = new Date().toLocaleTimeString();
+					
+					// Append the message and the time it was received
+					newMessage.textContent = "Received at" +  receivedTime + ": " + event.data;
 					messagesDiv.appendChild(newMessage);
 				};
 				

@@ -37,3 +37,22 @@ This project is designed to:
    ```bash
    git clone https://github.com/yourusername/sse-argo-tester.git
    cd sse-argo-tester
+   ```
+
+2. Run the server:
+   ```bash
+   go run main.go
+   ```
+3. The server starts on http://localhost:3000.
+### **2. Set Up Cloudflare Argo Tunnel**
+1. Start an Argo Tunnel:
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+2. Note the public URL provided by Cloudflare (e.g., https://yourdomain.cloudflare.com).
+### **3. Test the SSE Client**
+1. Open the public URL in your browser.
+2. You should see an HTML page displaying live messages from the server.
+
+# **RESULT**
+Based on the result of this test, it appears that Cloudflare Argo Tunnels do support SSE (Server-Side Events) but not intentionally. The behavior you get from this is Cloudflare initially buffering the server events (for roughly 90 seconds) before allowing the events to stream to the client unencumbered. This is likely a result of an optimization Cloudflare implemented to reduce the number of packets being processed by the their infrastructure by trying to wait for the server to finish it's response before relaying it to the client, which just so happens to cause this buffering effect in the SSE usecase.
